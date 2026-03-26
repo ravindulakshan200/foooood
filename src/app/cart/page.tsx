@@ -7,11 +7,22 @@ import Input from "@/components/common/Input";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/providers/ToastProvider";
+
+declare global {
+  interface Window {
+    payhere: any;
+  }
+}
 
 export default function CheckoutPage() {
   const { items, cartTotal, clearCart } = useCart();
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -26,16 +37,113 @@ export default function CheckoutPage() {
   const deliveryFee = orderType === "delivery" ? 250 : 0;
   const finalTotal = cartTotal + deliveryFee;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate PayHere integration
-    // Normally you'd submit order to Supabase as 'pending', generate hash via API, and post form to PayHere.
-    // Here we'll just clear cart and redirect to success.
-    clearCart();
     
-    // Pass mock order number via query string
-    const orderNum = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-    router.push(`/checkout/success?order=${orderNum}`);
+    // Validation
+    if (!formData.firstName.trim() || !formData.phone.trim()) {
+      toast("Name and phone number are required.", "error");
+      return;
+    }
+    if (orderType === "delivery" && !formData.address.trim()) {
+      toast("Address is required for delivery.", "error");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const orderPayload = {
+        customer_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        phone: formData.phone,
+        address: orderType === "delivery" ? `${formData.address}, ${formData.city}` : "Pickup",
+        items_json: JSON.stringify(items),
+        subtotal: cartTotal,
+        delivery_fee: deliveryFee,
+        total: finalTotal,
+        payment_status: "pending",
+        order_type: orderType
+      };
+
+      const { error, data } = await supabase.from('orders').insert([orderPayload]).select().single();
+
+      if (error) {
+        toast("Failed to process order. Please try again.", "error");
+        console.error(error);
+        setIsLoading(false);
+        return;
+      }
+
+      const orderId = data.id;
+
+      // 1. Fetch encrypted MD5 Hash
+      const hashRes = await fetch('/api/payhere/hash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, amount: finalTotal, currency: 'LKR' })
+      });
+      const hashData = await hashRes.json();
+
+      if (!hashData.hash) {
+        toast("Payment gateway configuration error.", "error");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Configure PayHere Object
+      const isSandbox = process.env.NEXT_PUBLIC_PAYHERE_SANDBOX === 'true';
+      const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID || '1222956';
+      
+      const payment: any = {
+        sandbox: isSandbox,
+        merchant_id: merchantId,
+        return_url: window.location.origin + '/checkout/success?order=' + orderId,
+        cancel_url: window.location.origin + '/cart',
+        notify_url: window.location.origin + '/api/payhere/notify',
+        order_id: orderId,
+        items: 'Sorriso Food Order',
+        amount: finalTotal.toFixed(2), // SDK prefers 2 decimal places formatted
+        currency: 'LKR',
+        hash: hashData.hash,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address || 'Pickup',
+        city: formData.city || 'Colombo',
+        country: 'Sri Lanka'
+      };
+
+      console.log("=== PayHere Payload Debug ===");
+      console.log("Payment Configuration:", payment);
+      console.log("=============================");
+
+      // 3. Define Callback Interceptors
+      window.payhere.onCompleted = async function onCompleted(completedOrderId: string) {
+        await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orderId);
+        toast("Order placed successfully!", "success");
+        clearCart();
+        router.push(`/checkout/success?order=${orderId}`);
+        setIsLoading(false);
+      };
+
+      window.payhere.onDismissed = function onDismissed() {
+        toast("Payment Cancelled", "error");
+        setIsLoading(false);
+      };
+
+      window.payhere.onError = function onError(error: any) {
+        toast("Payment Error: " + error, "error");
+        setIsLoading(false);
+      };
+
+      // 4. Trigger Widget
+      window.payhere.startPayment(payment);
+
+    } catch (err) {
+      toast("An unexpected error occurred.", "error");
+      setIsLoading(false);
+    }
   };
 
   if (items.length === 0) {
@@ -203,9 +311,14 @@ export default function CheckoutPage() {
 
             <button 
               type="submit"
-              className="mt-12 w-full bg-accent hover:bg-accent-hover text-background py-5 font-accent text-sm tracking-[0.2em] uppercase font-bold border-none transition-all hover:shadow-[0_0_20px_rgba(201,168,76,0.3)] flex justify-center items-center gap-2"
+              disabled={isLoading || items.length === 0}
+              className="mt-12 w-full bg-accent hover:bg-accent-hover text-background py-5 font-accent text-sm tracking-[0.2em] uppercase font-bold border-none transition-all hover:shadow-[0_0_20px_rgba(201,168,76,0.3)] flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Pay via PayHere
+              {isLoading ? (
+                <>Processing <Loader2 className="w-4 h-4 animate-spin" /></>
+              ) : (
+                "Place Order"
+              )}
             </button>
             <p className="text-center font-body text-xs text-text-muted mt-4">
               Secure payments powered by PayHere Sri Lanka.

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Cormorant_Garamond, DM_Sans, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/providers/ToastProvider";
@@ -39,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${montserrat.variable} scroll-smooth`}>
       <body className="bg-background text-text-primary text-base min-h-screen flex flex-col font-body antialiased">
+        <Script src="https://www.payhere.lk/lib/payhere.js" strategy="lazyOnload" />
         <GlobalCursor />
         <CartProvider>
           <ToastProvider>

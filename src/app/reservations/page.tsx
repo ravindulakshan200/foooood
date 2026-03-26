@@ -4,7 +4,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Input from "@/components/common/Input";
 import { format, addDays } from "date-fns";
-import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/providers/ToastProvider";
 
 export default function ReservationsPage() {
   const [step, setStep] = useState(1);
@@ -18,6 +20,8 @@ export default function ReservationsPage() {
     email: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const dates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
   const timeSlots = ["18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30"];
@@ -34,10 +38,47 @@ export default function ReservationsPage() {
     e.preventDefault();
     if (step < 3) return nextStep();
 
-    // Here we'd typically save to Supabase:
-    // await supabase.from('bookings').insert(formData);
-    
-    setIsSubmitted(true);
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.email.trim()) {
+      toast("Please fill in all contact details.", "error");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.from('bookings').insert([{
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        date: formData.date,
+        time: formData.time,
+        guests: formData.guests,
+        special_requests: formData.requests,
+        status: 'pending'
+      }]);
+
+      if (error) {
+        toast("Failed to submit reservation. Please try again.", "error");
+        console.error(error);
+      } else {
+        toast("Reservation successfully submitted!", "success");
+        setIsSubmitted(true);
+        setFormData({
+          date: format(new Date(), "yyyy-MM-dd"),
+          time: "19:00",
+          guests: 2,
+          requests: "",
+          name: "",
+          phone: "",
+          email: "",
+        });
+        setStep(1);
+      }
+    } catch (err) {
+      toast("An unexpected error occurred.", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formVariants = {
@@ -254,9 +295,14 @@ export default function ReservationsPage() {
               ) : (
                 <button 
                   type="submit" 
-                  className="flex-1 bg-accent text-background font-accent text-xs tracking-widest uppercase font-bold hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 py-4 shadow-xl shadow-accent/20"
+                  disabled={isLoading}
+                  className="flex-1 bg-accent text-background font-accent text-xs tracking-widest uppercase font-bold hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 py-4 shadow-xl shadow-accent/20 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Confirm Reservation <CheckCircle className="w-4 h-4" />
+                  {isLoading ? (
+                    <>Processing <Loader2 className="w-4 h-4 animate-spin" /></>
+                  ) : (
+                    <>Confirm Reservation <CheckCircle className="w-4 h-4" /></>
+                  )}
                 </button>
               )}
             </div>

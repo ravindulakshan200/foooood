@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader2, Star } from "lucide-react";
 import Image from "next/image";
-import { MENU_ITEMS } from "@/lib/seed-data";
+import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/components/providers/CartProvider";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -16,8 +16,33 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("menu_items")
+          .select("*");
+          
+        if (error) {
+          toast("Failed to load menu items", "error");
+        } else if (data) {
+          setMenuItems(data as MenuItem[]);
+        }
+      } catch (err) {
+        toast("Network error occurred", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMenu();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAdd = (item: MenuItem) => {
     addToCart(item);
@@ -25,7 +50,7 @@ export default function MenuPage() {
   };
 
   const filteredItems = useMemo(() => {
-    return MENU_ITEMS.filter((item) => {
+    return menuItems.filter((item) => {
       const matchesCategory = activeCategory === "All" || item.category === activeCategory;
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             item.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -93,53 +118,70 @@ export default function MenuPage() {
         </div>
 
         {/* Menu Grid */}
-        <motion.div 
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredItems.map((item) => (
-              <motion.div
-                layout
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                transition={{ duration: 0.4 }}
-                className="bg-card rounded-2xl overflow-hidden glass group flex flex-col h-[480px] hover:glass-hover transform hover:-translate-y-2 transition-all duration-300 relative shadow-lg"
-              >
-                <div className="relative h-[220px] w-full overflow-hidden shrink-0">
-                  <Image 
-                    src={item.image_url} 
-                    alt={item.name} 
-                    fill 
-                    className="object-cover group-hover:scale-110 transition-transform duration-700" 
-                  />
-                  <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md border border-white/10 font-heading text-lg text-accent px-4 py-1 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
-                    {formatPrice(item.price)}
-                  </div>
-                </div>
-                <div className="p-6 flex flex-col flex-grow relative">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-heading text-xl font-medium text-white tracking-wide leading-tight">{item.name}</h3>
-                  </div>
-                  <p className="font-body text-text-muted text-sm font-light leading-relaxed mb-6 flex-grow">
-                    {item.description}
-                  </p>
-                  <button 
-                    onClick={() => handleAdd(item)}
-                    className="mt-auto flex items-center justify-between w-full border border-white/10 group-hover:border-accent text-text-muted group-hover:text-accent bg-background/50 py-3 px-5 rounded-xl transition-all duration-300"
-                  >
-                    <span className="font-accent text-[10px] tracking-[0.2em] uppercase font-bold">Add to Cart</span>
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        {/* Menu Grid and Layout Conditional Loader */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-32 text-accent">
+            <Loader2 className="w-12 h-12 mb-4 animate-spin opacity-80" />
+            <p className="font-accent tracking-[0.2em] text-xs uppercase text-text-muted">Loading Menu...</p>
+          </div>
+        ) : (
+          <motion.div 
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredItems.map((item) => (
+                <motion.div
+                  layout
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-card rounded-2xl overflow-hidden glass group flex flex-col h-[480px] hover:glass-hover transform hover:-translate-y-2 transition-all duration-300 relative shadow-lg"
+                >
+                  {/* Featured Tag Details */}
+                  {item.is_featured && (
+                    <div className="absolute top-4 left-4 z-20 flex gap-1">
+                      <div className="bg-accent text-background font-accent text-[8px] tracking-[0.2em] px-3 py-1.5 uppercase shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex items-center gap-1 font-bold">
+                        <Star className="w-2.5 h-2.5 fill-background" /> Featured
+                      </div>
+                    </div>
+                  )}
 
-        {filteredItems.length === 0 && (
+                  <div className="relative h-[220px] w-full overflow-hidden shrink-0">
+                    <Image 
+                      src={item.image_url} 
+                      alt={item.name} 
+                      fill 
+                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                    />
+                    <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md border border-white/10 font-heading text-lg text-accent px-4 py-1 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-20">
+                      {formatPrice(item.price)}
+                    </div>
+                  </div>
+                  <div className="p-6 flex flex-col flex-grow relative">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-heading text-xl font-medium text-white tracking-wide leading-tight z-10">{item.name}</h3>
+                    </div>
+                    <p className="font-body text-text-muted text-sm font-light leading-relaxed mb-6 flex-grow z-10">
+                      {item.description}
+                    </p>
+                    <button 
+                      onClick={() => handleAdd(item)}
+                      className="mt-auto z-10 flex items-center justify-between w-full border border-white/10 group-hover:border-accent text-text-muted group-hover:text-accent bg-background/50 py-3 px-5 rounded-xl transition-all duration-300 relative"
+                    >
+                      <span className="font-accent text-[10px] tracking-[0.2em] uppercase font-bold">Add to Cart</span>
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {!isLoading && filteredItems.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 

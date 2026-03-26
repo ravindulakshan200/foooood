@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 import Input from "@/components/common/Input";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/providers/ToastProvider";
 
 export default function ContactPage() {
@@ -13,16 +14,32 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      toast("Please fill in all required fields.", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate Supabase insert:
-    // await supabase.from('contact_messages').insert(formData);
-    
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.from('contact_messages').insert([{
+        name: formData.name,
+        email: formData.email,
+        message: formData.message
+      }]);
+
+      if (error) {
+        toast("Failed to send message. Please try again.", "error");
+      } else {
+        setFormData({ name: "", email: "", message: "" });
+        toast("Message sent successfully. We will be in touch shortly.", "success");
+      }
+    } catch (err) {
+      toast("An unexpected error occurred.", "error");
+    } finally {
       setIsSubmitting(false);
-      setFormData({ name: "", email: "", message: "" });
-      toast("Message sent successfully. We will be in touch shortly.", "success");
-    }, 1500);
+    }
   };
 
   return (
@@ -161,7 +178,7 @@ export default function ContactPage() {
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     {isSubmitting ? "Sending..." : "Send Message"}
-                    {!isSubmitting && <Send className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />}
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />}
                   </span>
                 </button>
               </form>
