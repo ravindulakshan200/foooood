@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   CalendarDays,
   UtensilsCrossed,
+  MessageSquare,
   LogOut,
   Menu,
   X,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/admin/orders",    label: "Orders",    icon: ShoppingBag },
   { href: "/admin/bookings",  label: "Bookings",  icon: CalendarDays },
   { href: "/admin/menu",      label: "Menu",      icon: UtensilsCrossed },
+  { href: "/admin/messages",  label: "Messages",  icon: MessageSquare },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -67,6 +67,7 @@ export default function CheckoutPage() {
         delivery_fee: deliveryFee,
         total: finalTotal,
         payment_status: "pending",
+        order_status: "pending",
         order_type: orderType
       };
 

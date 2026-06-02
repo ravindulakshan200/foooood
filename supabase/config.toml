@@ -1,0 +1,5 @@
+# Supabase local config — linked to remote project for migrations
+project_id = "bpvxmtonuyhydyobbdjo"
+
+[db]
+major_version = 15

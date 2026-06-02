@@ -5,25 +5,26 @@ import { usePathname } from "next/navigation";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useCart } from "@/components/providers/CartProvider";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const navLinks = [
-  { name: "Home", href: "/" },
-  { name: "Menu", href: "/menu" },
-  { name: "Contact", href: "/contact" },
-];
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { cartCount, setIsCartOpen } = useCart();
+  const { locale, setLocale, t } = useLanguage();
+
+  const navLinks = [
+    { name: t.nav.home, href: "/" },
+    { name: t.nav.menu, href: "/menu" },
+    { name: t.nav.track, href: "/track" },
+    { name: t.nav.contact, href: "/contact" },
+  ];
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -33,8 +34,8 @@ export default function Navbar() {
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-[100] transition-all duration-500",
-          isScrolled 
-            ? "bg-secondary/80 backdrop-blur-md border-b border-white/5 py-4" 
+          isScrolled
+            ? "bg-secondary/80 backdrop-blur-md border-b border-white/5 py-4"
             : "bg-transparent py-6"
         )}
       >
@@ -45,11 +46,10 @@ export default function Navbar() {
             </h1>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-10">
+          <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
-                key={link.name}
+                key={link.href}
                 href={link.href}
                 className="relative group font-accent text-xs tracking-[0.2em] font-medium uppercase text-text-primary hover:text-white transition-colors"
               >
@@ -64,10 +64,25 @@ export default function Navbar() {
                 <span className="absolute -bottom-2 left-0 w-0 h-[1px] bg-accent transition-all duration-300 group-hover:w-full opacity-0 group-hover:opacity-100" />
               </Link>
             ))}
+
+            <div className="flex items-center gap-1 border border-white/10 rounded-full p-0.5">
+              {(["en", "si"] as const).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setLocale(lang)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-[10px] font-accent tracking-wider uppercase transition-all",
+                    locale === lang ? "bg-accent text-background" : "text-text-muted hover:text-white"
+                  )}
+                >
+                  {lang === "en" ? "EN" : "සිං"}
+                </button>
+              ))}
+            </div>
           </nav>
 
-          <div className="flex items-center gap-6 relative z-[101]">
-            <button 
+          <div className="flex items-center gap-4 relative z-[101]">
+            <button
               onClick={() => setIsCartOpen(true)}
               className="relative text-text-primary hover:text-accent transition-colors"
             >
@@ -86,7 +101,7 @@ export default function Navbar() {
               </AnimatePresence>
             </button>
 
-            <button 
+            <button
               className="md:hidden text-text-primary hover:text-accent transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -96,7 +111,6 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -109,7 +123,7 @@ export default function Navbar() {
             <nav className="flex flex-col gap-8 items-center mt-10">
               {navLinks.map((link) => (
                 <Link
-                  key={link.name}
+                  key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
@@ -121,13 +135,31 @@ export default function Navbar() {
                 </Link>
               ))}
             </nav>
+
+            <div className="flex justify-center gap-2 mt-8">
+              {(["en", "si"] as const).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setLocale(lang)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-xs font-accent tracking-wider uppercase border transition-all",
+                    locale === lang
+                      ? "bg-accent text-background border-accent"
+                      : "text-text-muted border-white/20"
+                  )}
+                >
+                  {lang === "en" ? "English" : "සිංහල"}
+                </button>
+              ))}
+            </div>
+
             <div className="mt-auto pb-10 flex flex-col items-center justify-center gap-6">
-              <Link 
-                href="/menu" 
+              <Link
+                href="/menu"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full max-w-xs block text-center bg-accent text-background font-accent text-sm tracking-[0.2em] uppercase py-4 font-bold hover:bg-accent-hover transition-colors"
               >
-                Order Now
+                {t.nav.orderNow}
               </Link>
             </div>
           </motion.div>

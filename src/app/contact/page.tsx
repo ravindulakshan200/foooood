@@ -6,6 +6,7 @@ import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 import Input from "@/components/common/Input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/providers/ToastProvider";
+import { MAP_EMBED_URL, SITE } from "@/lib/constants";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -78,7 +79,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h5 className="text-white font-accent text-xs tracking-[0.2em] uppercase mb-2">Location</h5>
-                    <p className="leading-relaxed">7th Lane, Wickramasinghepura Rd, Battaramulla</p>
+                    <p className="leading-relaxed">{SITE.address}</p>
                   </div>
                 </li>
                 <li className="flex gap-6 items-start">
@@ -87,7 +88,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h5 className="text-white font-accent text-xs tracking-[0.2em] uppercase mb-2">Reservations</h5>
-                    <p>0777 222 069 / 0767 074 385</p>
+                    <p>{SITE.phones.join(" / ")}</p>
                   </div>
                 </li>
                 <li className="flex gap-6 items-start">
@@ -96,7 +97,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h5 className="text-white font-accent text-xs tracking-[0.2em] uppercase mb-2">Email Directory</h5>
-                    <p>anushadilruksh88@gmail.com</p>
+                    <p>{SITE.email}</p>
                   </div>
                 </li>
                 <li className="flex gap-6 items-start">
@@ -115,7 +116,7 @@ export default function ContactPage() {
             <div className="w-full h-[300px] border border-white/10 rounded-2xl overflow-hidden glass relative group">
                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors pointer-events-none z-10" />
                <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1m3!1m2!1s0x3ae25923838dc2fd%3A0x6b72d2448373b5ae!2sColombo%2003%2C%20Colombo!5e0!3m2!1sen!2slk!4v1700000000000!5m2!1sen!2slk" 
+                src={MAP_EMBED_URL}
                 width="100%" 
                 height="100%" 
                 style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) opacity(80%)" }} 

@@ -1,45 +1,89 @@
 # Sorriso Food
 
-A premium, luxury Next.js 14 restaurant and e-commerce application.
+A premium Next.js 14 restaurant and online ordering app for **Sorriso**, Battaramulla.
 
-## 🚀 Tech Stack
+## Tech Stack
+
 - **Framework**: Next.js 14 (App Router)
 - **Styling**: Tailwind CSS, Framer Motion
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Supabase (PostgreSQL + Storage)
 - **Payments**: PayHere Sri Lanka
+- **Languages**: English & Sinhala (සිංහල)
 
-## 🛠️ Setup Instructions
+## Setup
 
-### 1. Database (Supabase) Setup
-1. Create a project on [Supabase.com](https://supabase.com/).
-2. Navigate to the **SQL Editor** in your Supabase Dashboard.
-3. Open `supabase/migrations/20240101_init_schema.sql` and run the entire script. This will generate your tables and insert 16 luxury menu items.
-4. Go to Project Settings -> API and copy your URL and `anon` public key.
-5. Create a `.env.local` file from the example:
-   ```bash
-   cp .env.local.example .env.local
-   ```
-6. Paste your credentials.
+### 1. Install dependencies
 
-### 2. PayHere Setup
-1. Obtain an account at PayHere Sandbox or Production.
-2. In your PayHere portal, navigate to Integration -> App credentials.
-3. Copy your `PAYHERE_MERCHANT_ID` and `PAYHERE_SECRET` into your `.env.local` file.
-4. Set `NEXT_PUBLIC_PAYHERE_ENV` to `sandbox` for testing.
+```bash
+npm install
+```
 
-### 3. Local Development
-1. Run `npm install`
-2. Run `npm run dev`
-3. Access at `http://localhost:3000`
+### 2. Environment variables
 
-### 4. Vercel Deployment
-1. Push your repository to GitHub.
-2. Import the project in [Vercel](https://vercel.com/).
-3. Add the environment variables from your `.env.local` to Vercel's Environment Variables settings.
-4. Deploy!
+```bash
+cp .env.example .env.local
+```
 
-## Features included
-- **Cinematic Landing Page**: Complete front-page with stagger animations and horizontal scroll.
-- **Glassmorphic Menu Filter**: Instantly filtering categories from the seed datastore.
-- **Interactive Checkouts & Cart**: Real-time state management using React Context. Floating label UI.
-- **Secure Integrations**: Ready infrastructure for Supabase inserts and PayHere hashes.
+Fill in your Supabase URL, anon key, and PayHere credentials.
+
+### 3. Database migrations
+
+In the Supabase SQL Editor, run these files **in order**:
+
+1. `supabase/migrations/20240101_init_schema.sql`
+2. `supabase/migrations/20240102_add_sizes_and_new_items.sql`
+3. `supabase/migrations/20240103_remove_demo_items.sql`
+4. `supabase/migrations/20240603_enhancements.sql` — newsletter, order tracking, image storage
+
+### 4. Admin user
+
+Create an admin account in Supabase → Authentication → Users, then sign in at `/admin/login`.
+
+### 5. Run locally
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## Features
+
+### Customer-facing
+- Cinematic landing page with animations
+- Menu with category filter, search, and size options
+- Cart & PayHere checkout
+- **Order tracking** at `/track` (by phone number)
+- Contact form & reservations
+- **English / Sinhala** language toggle
+- Google Maps (Battaramulla location)
+- WhatsApp ordering link
+
+### Admin panel (`/admin`)
+- Dashboard with stats
+- Orders — payment status, **fulfillment status**, WhatsApp notify
+- Bookings — confirm / cancel
+- Menu — add items, toggle availability, **upload images**
+- **Contact messages** — read & mark as read
+
+### Integrations
+- Supabase for menu, orders, bookings, contact, newsletter
+- PayHere sandbox/production payments
+- Supabase Storage bucket `menu-images` for dish photos
+
+## Deploy (Vercel)
+
+1. Push to GitHub
+2. Import project on [Vercel](https://vercel.com/)
+3. Add all `.env.local` variables to Vercel Environment Variables
+4. Deploy
+
+Set `NEXT_PUBLIC_SITE_URL` to your production domain (e.g. `https://sorrisofood.lk`).
+
+## Platform links
+
+Override delivery platform URLs in `.env.local`:
+
+- `NEXT_PUBLIC_FACEBOOK_URL`
+- `NEXT_PUBLIC_PICKME_URL`
+- `NEXT_PUBLIC_UBER_EATS_URL`

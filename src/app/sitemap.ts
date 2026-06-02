@@ -1,30 +1,13 @@
-import { MetadataRoute } from 'next'
- 
+import { MetadataRoute } from "next";
+
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sorrisofood.lk";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: 'https://sorrisofood.com',
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 1,
-    },
-    {
-      url: 'https://sorrisofood.com/menu',
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://sorrisofood.com/reservations',
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://sorrisofood.com/contact',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-  ]
+  const routes = ["", "/menu", "/cart", "/track", "/contact", "/reservations"];
+  return routes.map((path) => ({
+    url: `${BASE}${path}`,
+    lastModified: new Date(),
+    changeFrequency: path === "" ? "weekly" : "monthly",
+    priority: path === "" ? 1 : 0.7,
+  }));
 }

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { MapPin, Phone, Mail, Clock, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "../providers/ToastProvider";
+import { useLanguage } from "../providers/LanguageProvider";
+import { supabase } from "@/lib/supabase";
+import { SITE, PLATFORMS } from "@/lib/constants";
 
 // Social / platform icons
 const FacebookIcon = ({ className }: { className?: string }) => (
@@ -24,21 +27,34 @@ const PickMeIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const PLATFORMS = [
-  { name: "Facebook", Icon: FacebookIcon, href: "https://facebook.com/SorrisoFood", color: "hover:text-[#1877F2] hover:border-[#1877F2]/40" },
-  { name: "Uber Eats", Icon: UberEatsIcon, href: "#", color: "hover:text-[#06C167] hover:border-[#06C167]/40" },
-  { name: "PickMe Food", Icon: PickMeIcon, href: "#", color: "hover:text-[#E91E8C] hover:border-[#E91E8C]/40" },
-];
+const PLATFORMS_WITH_ICONS = PLATFORMS.map((p) => ({
+  ...p,
+  Icon: p.name === "Facebook" ? FacebookIcon : p.name === "PickMe Food" ? PickMeIcon : UberEatsIcon,
+}));
 
 export default function Footer() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    toast("Subscribed! We'll keep you updated.", "success");
-    setEmail("");
+    if (!email.trim()) return;
+
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("newsletter_subscribers")
+      .insert([{ email: email.trim().toLowerCase() }]);
+
+    if (error) {
+      if (error.code === "23505") toast(t.footer.alreadySubscribed, "success");
+      else toast(t.footer.subscribeFail, "error");
+    } else {
+      toast(t.footer.subscribed, "success");
+      setEmail("");
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -58,13 +74,13 @@ export default function Footer() {
             </p>
             {/* Social / Delivery Platforms */}
             <div className="flex flex-col gap-2">
-              {PLATFORMS.map(({ name, Icon, href, color }) => (
+              {PLATFORMS_WITH_ICONS.map(({ name, Icon, href, color, borderColor }) => (
                 <a
                   key={name}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex items-center gap-3 border border-white/10 rounded-lg px-3 py-2.5 text-text-muted ${color} transition-all font-accent text-[10px] tracking-widest uppercase`}
+                  className={`flex items-center gap-3 border border-white/10 rounded-lg px-3 py-2.5 text-text-muted ${color} ${borderColor} transition-all font-accent text-[10px] tracking-widest uppercase`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   {name}
@@ -76,33 +92,34 @@ export default function Footer() {
           {/* Quick Links */}
           <div>
             <h4 className="font-accent text-xs tracking-[0.2em] font-medium text-white uppercase mb-8">
-              Quick Links
+              {t.footer.quickLinks}
             </h4>
             <ul className="flex flex-col gap-4 font-body text-text-muted">
-              <li><Link href="/" className="hover:text-accent transition-colors">Home</Link></li>
-              <li><Link href="/menu" className="hover:text-accent transition-colors">Our Menu</Link></li>
-              <li><Link href="/cart" className="hover:text-accent transition-colors">Cart & Checkout</Link></li>
-              <li><Link href="/contact" className="hover:text-accent transition-colors">Contact Us</Link></li>
+              <li><Link href="/" className="hover:text-accent transition-colors">{t.nav.home}</Link></li>
+              <li><Link href="/menu" className="hover:text-accent transition-colors">{t.footer.ourMenu}</Link></li>
+              <li><Link href="/cart" className="hover:text-accent transition-colors">{t.footer.cartCheckout}</Link></li>
+              <li><Link href="/track" className="hover:text-accent transition-colors">{t.nav.track}</Link></li>
+              <li><Link href="/contact" className="hover:text-accent transition-colors">{t.footer.contactUs}</Link></li>
             </ul>
           </div>
 
           {/* Visit Us */}
           <div>
             <h4 className="font-accent text-xs tracking-[0.2em] font-medium text-white uppercase mb-8">
-              Find Us
+              {t.footer.findUs}
             </h4>
             <ul className="flex flex-col gap-5 font-body text-text-muted">
               <li className="flex gap-3 items-start">
                 <MapPin className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                <span className="text-sm">7th Lane, Wickramasinghepura Rd, Battaramulla</span>
+                <span className="text-sm">{SITE.address}</span>
               </li>
               <li className="flex gap-3 items-center">
                 <Phone className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-sm">0777 222 069 / 0767 074 385</span>
+                <span className="text-sm">{SITE.phones.join(" / ")}</span>
               </li>
               <li className="flex gap-3 items-center">
                 <Mail className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-sm">anushadilruksh88@gmail.com</span>
+                <span className="text-sm">{SITE.email}</span>
               </li>
               <li className="flex gap-3 items-start">
                 <Clock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
@@ -114,10 +131,10 @@ export default function Footer() {
           {/* Newsletter */}
           <div>
             <h4 className="font-accent text-xs tracking-[0.2em] font-medium text-white uppercase mb-8">
-              Stay Updated
+              {t.footer.stayUpdated}
             </h4>
             <p className="text-text-muted font-body text-sm mb-6 leading-relaxed">
-              Get notified about new dishes, special offers and seasonal promotions.
+              {t.footer.newsletterDesc}
             </p>
             <form onSubmit={handleSubscribe} className="relative group">
               <input
@@ -127,10 +144,12 @@ export default function Footer() {
                 placeholder="your@email.com"
                 className="w-full bg-background border border-white/10 focus:border-accent rounded-none px-4 py-3.5 text-white font-body text-sm focus:outline-none transition-colors placeholder:text-text-muted/50"
                 required
+                disabled={submitting}
               />
               <button
                 type="submit"
-                className="absolute right-0 top-0 bottom-0 px-5 bg-accent hover:bg-accent-hover text-background transition-colors flex items-center justify-center"
+                disabled={submitting}
+                className="absolute right-0 top-0 bottom-0 px-5 bg-accent hover:bg-accent-hover text-background transition-colors flex items-center justify-center disabled:opacity-50"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>

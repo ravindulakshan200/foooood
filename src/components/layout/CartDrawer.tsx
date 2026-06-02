@@ -4,7 +4,7 @@ import { useCart } from "../providers/CartProvider";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getFoodImageUrl } from "@/lib/utils";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -77,7 +77,7 @@ export default function CartDrawer() {
                     >
                       <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0">
                         <Image
-                          src={item.image_url || "/images/placeholder-food.jpg"}
+                          src={getFoodImageUrl(item.image_url)}
                           alt={item.name}
                           fill
                           className="object-cover"

@@ -14,15 +14,16 @@ import {
   X,
   Loader2,
   ImageOff,
+  Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { MenuItem } from "@/types";
+import { MENU_CATEGORIES } from "@/lib/constants";
+import { uploadMenuImage } from "@/lib/upload-image";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  "Starters", "Mains", "Pizza", "Pasta", "Salads", "Desserts", "Drinks", "Sides",
-];
+const CATEGORIES = [...MENU_CATEGORIES];
 
 const EMPTY_FORM: Omit<MenuItem, "id"> = {
   name: "",
@@ -45,6 +46,7 @@ interface AddModalProps {
 function AddItemModal({ open, onClose, onSaved }: AddModalProps) {
   const [form, setForm] = useState<Omit<MenuItem, "id">>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +57,21 @@ function AddItemModal({ open, onClose, onSaved }: AddModalProps) {
       setTimeout(() => firstInputRef.current?.focus(), 80);
     }
   }, [open]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const url = await uploadMenuImage(file);
+      setForm((prev) => ({ ...prev, image_url: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,8 +158,15 @@ function AddItemModal({ open, onClose, onSaved }: AddModalProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="menu-image" className="block text-xs font-medium text-zinc-400 uppercase tracking-widest">Image URL</label>
-                  <input id="menu-image" className={inputCls} placeholder="https://…" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+                  <label htmlFor="menu-image" className="block text-xs font-medium text-zinc-400 uppercase tracking-widest">Image</label>
+                  <div className="flex gap-2">
+                    <input id="menu-image" className={`${inputCls} flex-1`} placeholder="https://… or upload below" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+                    <label className="flex items-center gap-1.5 shrink-0 cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded-xl px-3 py-2.5 text-xs transition-all">
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Toggles */}

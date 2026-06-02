@@ -9,8 +9,10 @@ import {
   AlertCircle,
   ChevronDown,
   Package,
+  MessageCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ORDER_STATUS_LABELS, OrderStatus } from "@/lib/constants";
 
 type PaymentStatus = "pending" | "paid" | "failed" | "all";
 
@@ -24,6 +26,7 @@ interface Order {
   delivery_fee: number;
   total: number;
   payment_status: string;
+  order_status: string;
   order_type: string;
   created_at: string;
 }
@@ -57,6 +60,15 @@ function parseItems(items_json: string): string {
   }
 }
 
+const ORDER_STATUS_OPTIONS: OrderStatus[] = ["pending", "preparing", "ready", "delivered", "cancelled"];
+
+function whatsappUrl(phone: string, orderId: string, status: string) {
+  const msg = `Hi! Your Sorriso order #${orderId.slice(0, 8).toUpperCase()} is now: ${ORDER_STATUS_LABELS[status as OrderStatus] ?? status}. Thank you!`;
+  const digits = phone.replace(/\D/g, "");
+  const normalized = digits.startsWith("94") ? digits : `94${digits.replace(/^0/, "")}`;
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(msg)}`;
+}
+
 const FILTER_OPTIONS: { label: string; value: PaymentStatus }[] = [
   { label: "All Orders", value: "all" },
   { label: "Pending",    value: "pending" },
@@ -69,6 +81,7 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState<PaymentStatus>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -93,6 +106,15 @@ export default function AdminOrdersPage() {
   }, [filter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  const updateOrderStatus = async (id: string, order_status: OrderStatus) => {
+    setUpdating(id);
+    const supabase = createClient();
+    const { error: err } = await supabase.from("orders").update({ order_status }).eq("id", id);
+    if (err) setError(err.message);
+    else setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, order_status } : o)));
+    setUpdating(null);
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -146,7 +168,7 @@ export default function AdminOrdersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-800/50">
-                {["Order ID", "Customer", "Items", "Total", "Type", "Status", "Date"].map((h) => (
+                {["Order ID", "Customer", "Items", "Total", "Type", "Payment", "Fulfillment", "Date", "Actions"].map((h) => (
                   <th key={h} className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-widest px-5 py-3.5 whitespace-nowrap">
                     {h}
                   </th>
@@ -157,7 +179,7 @@ export default function AdminOrdersPage() {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(7)].map((__, j) => (
+                    {[...Array(9)].map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4" />
                       </td>
@@ -166,7 +188,7 @@ export default function AdminOrdersPage() {
                 ))
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
+                  <td colSpan={9} className="px-5 py-16 text-center">
                     <Package className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
                     <p className="text-zinc-500 text-sm">No orders found</p>
                   </td>
@@ -201,8 +223,32 @@ export default function AdminOrdersPage() {
                     <td className="px-5 py-4">
                       <StatusBadge status={order.payment_status} />
                     </td>
+                    <td className="px-5 py-4">
+                      <select
+                        value={order.order_status ?? "pending"}
+                        disabled={updating === order.id}
+                        onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
+                        className="appearance-none bg-zinc-800 border border-zinc-700 text-white text-[11px] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40 cursor-pointer capitalize"
+                      >
+                        {ORDER_STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-5 py-4 text-zinc-400 text-xs whitespace-nowrap">
                       {format(new Date(order.created_at), "MMM d, yyyy · HH:mm")}
+                    </td>
+                    <td className="px-5 py-4">
+                      <a
+                        href={whatsappUrl(order.phone, order.id, order.order_status ?? "pending")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+                        title="Notify customer via WhatsApp"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        WhatsApp
+                      </a>
                     </td>
                   </motion.tr>
                 ))

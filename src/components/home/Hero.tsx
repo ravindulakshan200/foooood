@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag } from "lucide-react";
+import { PLATFORMS, WHATSAPP_ORDER_URL } from "@/lib/constants";
 
 // Delivery platform SVG icons
 const UberEatsIcon = () => (
@@ -23,11 +24,11 @@ const FacebookIcon = () => (
   </svg>
 );
 
-const PLATFORMS = [
-  { name: "Uber Eats", icon: UberEatsIcon, href: "#", color: "hover:text-[#06C167]" },
-  { name: "PickMe Food", icon: PickMeIcon, href: "#", color: "hover:text-[#E91E8C]" },
-  { name: "Facebook", icon: FacebookIcon, href: "https://facebook.com/SorrisoFood", color: "hover:text-[#1877F2]" },
-];
+const PLATFORM_ICONS: Record<string, () => JSX.Element> = {
+  "Facebook": FacebookIcon,
+  "PickMe Food": PickMeIcon,
+  "Uber Eats": UberEatsIcon,
+};
 
 export default function Hero() {
   return (
@@ -115,10 +116,12 @@ export default function Hero() {
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
-            href="/menu"
+            href={WHATSAPP_ORDER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 border border-white/30 hover:border-accent hover:text-accent text-white px-8 py-4 font-accent text-sm tracking-[0.2em] uppercase bg-black/20 backdrop-blur-sm transition-all"
           >
-            View Menu
+            WhatsApp Order
           </Link>
         </motion.div>
 
@@ -133,7 +136,9 @@ export default function Hero() {
             Also available on
           </span>
           <div className="flex items-center gap-3 flex-wrap justify-center">
-            {PLATFORMS.map((p) => (
+            {PLATFORMS.map((p) => {
+              const Icon = PLATFORM_ICONS[p.name];
+              return (
               <a
                 key={p.name}
                 href={p.href}
@@ -141,10 +146,11 @@ export default function Hero() {
                 rel="noopener noreferrer"
                 className={`flex items-center gap-2 bg-white/5 border border-white/10 backdrop-blur-md rounded-full px-4 py-2 text-text-muted ${p.color} hover:border-white/30 transition-all font-accent text-xs tracking-widest`}
               >
-                <p.icon />
+                {Icon && <Icon />}
                 {p.name}
               </a>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       </div>
